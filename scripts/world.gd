@@ -1,11 +1,14 @@
 extends Spatial
 
 
-# Pan by this many tiles per second.
-const CAMERA_PAN_SPEED = 20.0
+# Camera flight speed in tiles/s.
+const CAMERA_FLIGHT_SPEED = 20.0
+
+# How far you can click.
+const CLICK_RANGE = 64.0
 
 # World size in the XZ plane.
-export(int) var world_size = 256
+export(int) var world_size = 128
 
 # How tall the entire terrain section is.
 export(int) var terrain_height = 16
@@ -28,36 +31,62 @@ var _tile_type_to_id = {}
 
 onready var tile_grid = $Tiles
 
+onready var camera = $Camera
+
 
 func _ready():
 	update_mesh_library()
 	generate_terrain()
 
 
+func _input(event):
+	if event is InputEventMouseButton and event.is_pressed():
+		var start = camera.project_ray_origin(event.position)
+		var end = start + camera.project_ray_normal(event.position) * CLICK_RANGE
+		
+		var space = get_world().direct_space_state
+		var result = space.intersect_ray(start, end)
+		
+		if result:
+			# A little hack. "Dig" into the tile to get the right position.
+			var extension = start.direction_to(end) * 0.05
+			var position = result.position + extension
+			erase_v(tile_grid.world_to_map(position))
+
+
 func _process(delta):
 	if Input.is_action_just_pressed("quit"):
 		get_tree().quit(0)
 	
-	var velocity = Vector2.ZERO
-	
-	velocity.x += Input.get_action_strength("pan_left")
-	velocity.x -= Input.get_action_strength("pan_right")
-	
-	velocity.y += Input.get_action_strength("pan_up")
-	velocity.y -= Input.get_action_strength("pan_down")
-	
-	velocity = velocity.normalized() * CAMERA_PAN_SPEED * delta
-	
-	var camera = $Camera
-	camera.translation.x += velocity.x
-	camera.translation.z += velocity.y
+	process_camera(delta)
 	
 	$FPS.text = "FPS: %s" % Engine.get_frames_per_second()
+
+
+func process_camera(delta):
+	var velocity = Vector3.ZERO
+	
+	velocity.x += Input.get_action_strength("fly_left")
+	velocity.x -= Input.get_action_strength("fly_right")
+	
+	velocity.y += Input.get_action_strength("fly_up")
+	velocity.y -= Input.get_action_strength("fly_down")
+	
+	velocity.z += Input.get_action_strength("fly_forward")
+	velocity.z -= Input.get_action_strength("fly_backward")
+	
+	velocity = velocity * CAMERA_FLIGHT_SPEED * delta
+	
+	# `translate' takes into account the rotation.
+	camera.translation += velocity
 
 
 # Create a `MeshLibrary' based on the available tile types.
 func update_mesh_library():
 	var mesh_library = MeshLibrary.new()
+	
+	var shape = BoxShape.new()
+	shape.extents = Vector3.ONE * 0.5
 	
 	for tile_name in available_tile_types:
 		var tile_def = available_tile_types[tile_name]
@@ -73,12 +102,16 @@ func update_mesh_library():
 		
 		mesh_library.set_item_name(id, tile_name)
 		mesh_library.set_item_mesh(id, mesh)
+		mesh_library.set_item_shapes(id, [shape, Transform.IDENTITY])
 	
 	tile_grid.mesh_library = mesh_library
 
 
 func generate_terrain():
+	randomize()
+	
 	var noisy = OpenSimplexNoise.new()
+	noisy.seed = randi()
 	noisy.period = world_size * generation_period
 	
 	for x in range(world_size):
@@ -94,3 +127,11 @@ func generate_terrain():
 func fill(x, y, z, tile_type):
 	var id = _tile_type_to_id[tile_type]
 	tile_grid.set_cell_item(x, y, z, id)
+
+
+func erase(x, y, z):
+	tile_grid.set_cell_item(x, y, z, -1)
+
+
+func erase_v(position):
+	erase(position.x, position.y, position.z)
