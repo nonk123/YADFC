@@ -8,9 +8,14 @@
 
 config_version=4
 
-_global_script_classes=[  ]
+_global_script_classes=[ {
+"base": "KinematicBody",
+"class": "Creature",
+"language": "GDScript",
+"path": "res://scripts/creature.gd"
+} ]
 _global_script_class_icons={
-
+"Creature": ""
 }
 
 [application]
@@ -18,6 +23,10 @@ _global_script_class_icons={
 config/name="YADFC"
 run/main_scene="res://scenes/world.tscn"
 config/icon="res://icon.png"
+
+[audio]
+
+default_bus_layout=""
 
 [importer_defaults]
 

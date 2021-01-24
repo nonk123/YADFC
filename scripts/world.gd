@@ -8,7 +8,7 @@ const CAMERA_FLIGHT_SPEED = 20.0
 const CLICK_RANGE = 64.0
 
 # World size in the XZ plane.
-export(int) var world_size = 128
+export(int) var world_size = 64
 
 # How tall the entire terrain section is.
 export(int) var terrain_height = 16
@@ -20,7 +20,7 @@ export(float) var period = 0.8
 export(float) var lacunarity = 2.5
 
 # Spawn this many creatures when the world is generated.
-export(int) var creatures_count = 50
+export(int) var creatures_count = 10
 
 # Creatures will be placed at least this many tiles apart.
 export(float) var private_space = 5.0
@@ -35,6 +35,8 @@ var available_tile_types = {
 	},
 }
 
+var selected_creature
+
 # Convert a tile type name to its ID in the mesh library.
 var _tile_type_to_id = {}
 
@@ -44,27 +46,44 @@ onready var creatures = $Creatures
 
 onready var camera = $Camera
 
+onready var selected_tile = $SelectedTile
+
+# The A* pathfinder instance to be used elsewhere.
+onready var astar = AStar.new()
+
 
 func _ready():
 	update_mesh_library()
 	generate_terrain()
 	place_creatures()
+	update_astar()
 
 
 func _input(event):
-	if event is InputEventMouseButton and event.is_pressed():
-		var start = camera.project_ray_origin(event.position)
-		var end = start + camera.project_ray_normal(event.position) * CLICK_RANGE
-		
-		var space = get_world().direct_space_state
-		var exclude = creatures.get_children()
-		var result = space.intersect_ray(start, end, exclude)
+	if event is InputEventMouseMotion:
+		var result = cast_ray(event.position)
 		
 		if result:
-			# A little hack. "Dig" into the tile to get the right position.
-			var extension = start.direction_to(end) * 0.05
-			var position = result.position + extension
-			erase_v(tile_grid.world_to_map(position))
+			var tile_position = tile_grid.world_to_map(result.position)
+			# Prevent clipping into the ground.
+			selected_tile.translation = tile_position + Vector3.UP * 0.001
+	
+	if event is InputEventMouseButton and event.is_pressed():
+		var result = cast_ray(event.position)
+		
+		if not result:
+			return
+		
+		if result.collider is Creature:
+			if selected_creature:
+				selected_creature.shade_ring()
+			
+			selected_creature = result.collider
+			selected_creature.shade_ring(Color(0.0, 0.8, 0.0))
+		elif selected_creature:
+			selected_creature.target = result.position
+		else:
+			selected_creature = null
 
 
 func _process(delta):
@@ -163,14 +182,72 @@ func place_creatures():
 		creatures.add_child(node)
 
 
+# Fill `astar' with points.
+func update_astar():
+	astar.clear()
+	
+	var points = []
+	
+	for point in tile_grid.get_used_cells():
+		# Centered and directly above.
+		point += Vector3(0.5, 1.0, 0.5)
+		
+		if is_air_v(point):
+			points.push_front(point)
+	
+	var point_to_id = {}
+	
+	for id in range(len(points)):
+		var point = points[id]
+		
+		astar.add_point(id, point)
+		point_to_id[point] = id
+		
+		for neighbour in get_neighbours(point):
+			var their_id = point_to_id.get(neighbour)
+			
+			if their_id:
+				astar.connect_points(id, their_id)
+
+
+func get_neighbours(point):
+	var neighbours = []
+	
+	for dx in [-1.0, 0.0, 1.0]:
+		for dy in [-1.0, 0.0, 1.0]:
+			for dz in [-1.0, 0.0, 1.0]:
+				var offset = Vector3(dx, dy, dz)
+				
+				if offset.length_squared() != 0.0:
+					neighbours.push_front(point + offset)
+	
+	return neighbours
+
+
+func cast_ray(cursor_position):
+	var start = camera.project_ray_origin(cursor_position)
+	var end = start + camera.project_ray_normal(cursor_position) * CLICK_RANGE
+	
+	var space = get_world().direct_space_state
+	return space.intersect_ray(start, end)
+
+
 func fill(x, y, z, tile_type):
 	var id = _tile_type_to_id[tile_type]
 	tile_grid.set_cell_item(x, y, z, id)
 
 
 func erase(x, y, z):
-	tile_grid.set_cell_item(x, y, z, -1)
+	tile_grid.set_cell_item(x, y, z, tile_grid.INVALID_CELL_ITEM)
 
 
 func erase_v(position):
 	erase(position.x, position.y, position.z)
+
+
+func is_air(x, y, z):
+	return tile_grid.get_cell_item(x, y, z) == tile_grid.INVALID_CELL_ITEM
+
+
+func is_air_v(position):
+	return is_air(position.x, position.y, position.z)
