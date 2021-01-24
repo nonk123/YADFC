@@ -14,7 +14,16 @@ export(int) var world_size = 128
 export(int) var terrain_height = 16
 
 # Larger values make the world smoother.
-export(float) var generation_period = 0.5
+export(float) var period = 0.8
+
+# Not sure what this does to worldgen, but it does something.
+export(float) var lacunarity = 2.5
+
+# Spawn this many creatures when the world is generated.
+export(int) var creatures_count = 50
+
+# Creatures will be placed at least this many tiles apart.
+export(float) var private_space = 5.0
 
 # Tiles available for placement.
 var available_tile_types = {
@@ -31,12 +40,15 @@ var _tile_type_to_id = {}
 
 onready var tile_grid = $Tiles
 
+onready var creatures = $Creatures
+
 onready var camera = $Camera
 
 
 func _ready():
 	update_mesh_library()
 	generate_terrain()
+	place_creatures()
 
 
 func _input(event):
@@ -45,7 +57,8 @@ func _input(event):
 		var end = start + camera.project_ray_normal(event.position) * CLICK_RANGE
 		
 		var space = get_world().direct_space_state
-		var result = space.intersect_ray(start, end)
+		var exclude = creatures.get_children()
+		var result = space.intersect_ray(start, end, exclude)
 		
 		if result:
 			# A little hack. "Dig" into the tile to get the right position.
@@ -112,7 +125,8 @@ func generate_terrain():
 	
 	var noisy = OpenSimplexNoise.new()
 	noisy.seed = randi()
-	noisy.period = world_size * generation_period
+	noisy.period = world_size * period
+	noisy.lacunarity = lacunarity
 	
 	for x in range(world_size):
 		for z in range(world_size):
@@ -122,6 +136,31 @@ func generate_terrain():
 			for y in range(height):
 				fill(x, y, z, "dirt")
 			fill(x, height, z, "grass")
+
+
+func place_creatures():
+	var placed_so_far = []
+	
+	while len(placed_so_far) < creatures_count:
+		var x = floor(rand_range(0, world_size))
+		var y = floor(rand_range(0, world_size))
+		
+		var position = Vector2(x, y) + Vector2.ONE * 0.5
+		var can_place = true
+		
+		for neighbour in placed_so_far:
+			if position.distance_to(neighbour) < private_space:
+				can_place = false
+				break
+		
+		if not can_place:
+			continue
+		
+		placed_so_far.append(position)
+		
+		var node = preload("res://entities/creature.tscn").instance()
+		node.translate(Vector3(position.x, terrain_height, position.y))
+		creatures.add_child(node)
 
 
 func fill(x, y, z, tile_type):

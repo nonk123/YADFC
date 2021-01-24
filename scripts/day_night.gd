@@ -11,8 +11,11 @@ var time = cycle_length / 4.0
 func _process(delta):
 	time += delta
 	
-	var theta = PI * time / cycle_length
-	var energy = abs(sin(2.0 * theta))
+	while time > cycle_length:
+		time -= cycle_length
+	
+	var theta = 2.0 * PI * time / cycle_length
+	var energy = 0.5 * (1 + sin(theta))
 	var sun_longitude = theta
 	
 	var light = $Light
@@ -20,4 +23,4 @@ func _process(delta):
 	light.rotation.x = sun_longitude
 	
 	var sky = $Environment.environment.background_sky
-	sky.sun_longitude = sun_longitude
+	sky.sun_longitude = rad2deg(sun_longitude)
