@@ -13,9 +13,15 @@ _global_script_classes=[ {
 "class": "Creature",
 "language": "GDScript",
 "path": "res://scripts/creature.gd"
+}, {
+"base": "AStar",
+"class": "MyAStar",
+"language": "GDScript",
+"path": "res://scripts/my_astar.gd"
 } ]
 _global_script_class_icons={
-"Creature": ""
+"Creature": "",
+"MyAStar": ""
 }
 
 [application]

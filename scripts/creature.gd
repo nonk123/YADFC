@@ -2,6 +2,13 @@ class_name Creature
 extends KinematicBody
 
 
+# Scan this many path nodes ahead to find better movement strategy.
+# Shouldn't be more than how far the creature jumps (in the XZ plane).
+const SCAN_AHEAD = 5
+
+# If the Y difference is this big, we try to jump over the obstacle.
+const JUMP_EPSILON = 0.5
+
 # How hard this creature is pulled down.
 export(float) var gravity = 9.8
 
@@ -9,7 +16,7 @@ export(float) var gravity = 9.8
 export(float) var movement_speed = 5.0
 
 # Jumping accelerates the creature this much.
-export(float) var jump_power = 5.0
+export(float) var jump_power = 5.4
 
 # Velocity with movement applied.
 var velocity = Vector3.ZERO
@@ -32,59 +39,81 @@ func _ready():
 
 
 func _physics_process(delta):
-	run_ai()
-	go_to_next_node(delta)
+	if target:
+		run_ai()
+		
+		if path:
+			go_to_next_node(delta)
+	else:
+		velocity.x = 0.0
+		velocity.z = 0.0
 	
 	velocity.y -= gravity * delta
 	
 	# Prevent moving into our spot.
-	astar.set_point_weight_scale(standing_on(), 1.0)
+	disable_node_below(false)
 	velocity = move_and_slide(velocity, Vector3.UP)
-	astar.set_point_weight_scale(standing_on(), 100.0)
+	disable_node_below(true)
 
 
 func run_ai():
-	if target:
-		var start_id = astar.get_closest_point(translation)
-		var end_id = astar.get_closest_point(target)
-		path = astar.get_point_path(start_id, end_id)
+	var start_id = astar.get_closest_point(translation, true)
+	var end_id = astar.get_closest_point(target, true)
+	
+	path = astar.get_point_path(start_id, end_id)
 
 
 func go_to_next_node(delta):
-	var start = translation
+	var translation_xz = Vector2(translation.x, translation.z)
+	var last = translation
 	
 	var goal
+	var goal_xz
 	
-	if not path:
-		return
-	elif len(path) == 1:
-		goal = path[0]
-	else:
-		goal = path[1]
+	var direction
 	
-	var start_xz = Vector2(start.x, start.z)
-	var goal_xz = Vector2(goal.x, goal.z)
+	var index = 0 if len(path) == 1 else 1
 	
-	var direction = goal_xz - start_xz
+	var should_jump = false
+	
+	# Try to find a better path to the node (e.g., by jumping onto it).
+	while index < len(path) and index < SCAN_AHEAD:
+		goal = path[index]
+		goal_xz = Vector2(goal.x, goal.z)
+		
+		direction = goal_xz - translation_xz
+		
+		if goal.y - last.y >= JUMP_EPSILON:
+			should_jump = true
+		
+		last = goal
+		
+		index += 1
 	
 	var speed = movement_speed
 	
 	if speed * delta > direction.length():
 		speed = direction.length()
-		path.remove(0)
+		
+		# Reached the final node in the path.
+		if len(path) == 1:
+			target = null
 	
 	var movement = direction.normalized() * speed
 	
 	velocity.x = movement.x
 	velocity.z = movement.y
 	
-	if is_on_floor() and goal.y > start.y:
+	if is_on_floor() and should_jump:
 		velocity.y = jump_power
 
 
-# Return the ID of the tile we are standing on.
-func standing_on():
-	return astar.get_closest_point(translation + Vector3.DOWN * 0.5)
+# Disable the pathfinding node we are standing on.
+func disable_node_below(disabled):
+	var its_id = astar.get_closest_point(translation, true)
+	
+	if its_id != -1:
+		astar.set_point_disabled(its_id, disabled)
 
 
 func shade_ring(color = Color(0.7, 0.7, 0.7)):

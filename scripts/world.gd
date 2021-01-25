@@ -7,8 +7,11 @@ const CAMERA_FLIGHT_SPEED = 20.0
 # How far you can click.
 const CLICK_RANGE = 64.0
 
+# Place each pathfinding node on top of the tile, in its center.
+const PATHFINDING_OFFSET = Vector3(0.5, 1.0, 0.5)
+
 # World size in the XZ plane.
-export(int) var world_size = 64
+export(int) var world_size = 80
 
 # How tall the entire terrain section is.
 export(int) var terrain_height = 16
@@ -20,7 +23,7 @@ export(float) var period = 0.8
 export(float) var lacunarity = 2.5
 
 # Spawn this many creatures when the world is generated.
-export(int) var creatures_count = 10
+export(int) var creatures_count = 30
 
 # Creatures will be placed at least this many tiles apart.
 export(float) var private_space = 5.0
@@ -40,6 +43,9 @@ var selected_creature
 # Convert a tile type name to its ID in the mesh library.
 var _tile_type_to_id = {}
 
+# Quick access to pathfinding node IDs through their coordinates.
+var _point_to_id = {}
+
 onready var tile_grid = $Tiles
 
 onready var creatures = $Creatures
@@ -49,19 +55,18 @@ onready var camera = $Camera
 onready var selected_tile = $SelectedTile
 
 # The A* pathfinder instance to be used elsewhere.
-onready var astar = AStar.new()
+onready var astar = MyAStar.new()
 
 
 func _ready():
 	update_mesh_library()
 	generate_terrain()
 	place_creatures()
-	update_astar()
 
 
 func _input(event):
 	if event is InputEventMouseMotion:
-		var result = cast_ray(event.position)
+		var result = cast_ray(event.position, creatures.get_children())
 		
 		if result:
 			var tile_position = tile_grid.world_to_map(result.position)
@@ -74,16 +79,18 @@ func _input(event):
 		if not result:
 			return
 		
+		var node_position = astar.get_closest_point(result.position, true)
+		var node_enabled = not astar.is_point_disabled(node_position)
+		
 		if result.collider is Creature:
 			if selected_creature:
 				selected_creature.shade_ring()
 			
 			selected_creature = result.collider
+			
 			selected_creature.shade_ring(Color(0.0, 0.8, 0.0))
-		elif selected_creature:
+		elif selected_creature and node_enabled:
 			selected_creature.target = result.position
-		else:
-			selected_creature = null
 
 
 func _process(delta):
@@ -182,32 +189,12 @@ func place_creatures():
 		creatures.add_child(node)
 
 
-# Fill `astar' with points.
-func update_astar():
-	astar.clear()
+func cast_ray(cursor_position, exclude = []):
+	var start = camera.project_ray_origin(cursor_position)
+	var end = start + camera.project_ray_normal(cursor_position) * CLICK_RANGE
 	
-	var points = []
-	
-	for point in tile_grid.get_used_cells():
-		# Centered and directly above.
-		point += Vector3(0.5, 1.0, 0.5)
-		
-		if is_air_v(point):
-			points.push_front(point)
-	
-	var point_to_id = {}
-	
-	for id in range(len(points)):
-		var point = points[id]
-		
-		astar.add_point(id, point)
-		point_to_id[point] = id
-		
-		for neighbour in get_neighbours(point):
-			var their_id = point_to_id.get(neighbour)
-			
-			if their_id:
-				astar.connect_points(id, their_id)
+	var space = get_world().direct_space_state
+	return space.intersect_ray(start, end, exclude)
 
 
 func get_neighbours(point):
@@ -224,21 +211,39 @@ func get_neighbours(point):
 	return neighbours
 
 
-func cast_ray(cursor_position):
-	var start = camera.project_ray_origin(cursor_position)
-	var end = start + camera.project_ray_normal(cursor_position) * CLICK_RANGE
-	
-	var space = get_world().direct_space_state
-	return space.intersect_ray(start, end)
-
-
+# Fill the specified position with a type, and update the pathfinding nodes.
 func fill(x, y, z, tile_type):
-	var id = _tile_type_to_id[tile_type]
-	tile_grid.set_cell_item(x, y, z, id)
+	var tile_id = _tile_type_to_id[tile_type]
+	tile_grid.set_cell_item(x, y, z, tile_id)
+	
+	# The rest updates the pathfinding nodes.
+	
+	var point = tile_grid.world_to_map(Vector3(x, y, z)) + PATHFINDING_OFFSET
+	var point_id = astar.get_available_point_id()
+	
+	_point_to_id[point] = point_id
+	astar.add_point(point_id, point)
+	
+	for neighbour in get_neighbours(point):
+		var their_id = _point_to_id.get(neighbour)
+		
+		if their_id != null:
+			if neighbour == point + Vector3.DOWN:
+				# The tile directly below cannot be walked on.
+				_point_to_id.erase(neighbour)
+				astar.remove_point(their_id)
+			else:
+				astar.connect_points(point_id, their_id)
 
 
 func erase(x, y, z):
 	tile_grid.set_cell_item(x, y, z, tile_grid.INVALID_CELL_ITEM)
+	
+	var point = tile_grid.world_to_map(Vector3(x, y, z))
+	var point_id = _point_to_id[point]
+	
+	_point_to_id.erase(point)
+	astar.remove_point(point_id)
 
 
 func erase_v(position):
