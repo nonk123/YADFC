@@ -2,21 +2,14 @@ class_name Creature
 extends KinematicBody
 
 
-# Scan this many path nodes ahead to find better movement strategy.
-# Shouldn't be more than how far the creature jumps (in the XZ plane).
-const SCAN_AHEAD = 5
-
-# If the Y difference is this big, we try to jump over the obstacle.
-const JUMP_EPSILON = 0.5
-
 # How hard this creature is pulled down.
 export(float) var gravity = 9.8
 
 # How many tiles the creature can traverse per second.
-export(float) var movement_speed = 5.0
+export(float) var movement_speed = 8.0
 
 # Jumping accelerates the creature this much.
-export(float) var jump_power = 5.4
+export(float) var jump_power = 4.5
 
 # Velocity with movement applied.
 var velocity = Vector3.ZERO
@@ -64,31 +57,13 @@ func run_ai():
 
 
 func go_to_next_node(delta):
-	var translation_xz = Vector2(translation.x, translation.z)
-	var last = translation
+	var start = translation
+	var start_xz = Vector2(start.x, start.z)
 	
-	var goal
-	var goal_xz
+	var goal = path[0 if len(path) == 1 else 1]
+	var goal_xz = Vector2(goal.x, goal.z)
 	
-	var direction
-	
-	var index = 0 if len(path) == 1 else 1
-	
-	var should_jump = false
-	
-	# Try to find a better path to the node (e.g., by jumping onto it).
-	while index < len(path) and index < SCAN_AHEAD:
-		goal = path[index]
-		goal_xz = Vector2(goal.x, goal.z)
-		
-		direction = goal_xz - translation_xz
-		
-		if goal.y - last.y >= JUMP_EPSILON:
-			should_jump = true
-		
-		last = goal
-		
-		index += 1
+	var direction = goal_xz - start_xz
 	
 	var speed = movement_speed
 	
@@ -104,7 +79,7 @@ func go_to_next_node(delta):
 	velocity.x = movement.x
 	velocity.z = movement.y
 	
-	if is_on_floor() and should_jump:
+	if is_on_floor() and (goal.y - start.y > 0.01):
 		velocity.y = jump_power
 
 

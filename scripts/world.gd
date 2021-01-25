@@ -55,7 +55,7 @@ onready var camera = $Camera
 onready var selected_tile = $SelectedTile
 
 # The A* pathfinder instance to be used elsewhere.
-onready var astar = MyAStar.new()
+onready var astar = AStar.new()
 
 
 func _ready():
