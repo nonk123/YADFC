@@ -2,3 +2,5 @@
 
 Nothing to see here, just another Minecraft terrain generator. It might
 (?) become an RTS though.
+
+*NOTE:* the Windows export template requires =rcedit=.

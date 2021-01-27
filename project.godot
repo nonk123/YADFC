@@ -23,6 +23,7 @@ _global_script_class_icons={
 config/name="YADFC"
 run/main_scene="res://scenes/world.tscn"
 config/icon="res://icon.png"
+config/windows_native_icon="res://windows.ico"
 
 [audio]
 
