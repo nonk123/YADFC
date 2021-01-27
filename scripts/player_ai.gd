@@ -2,16 +2,13 @@ class_name PlayerAI
 extends AI
 
 
-const MOUSE_SENSITIVITY = 0.025
-
-
-var camera
+const MOUSE_SENSITIVITY = 0.02
 
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	camera = host.get_node("Camera")
+	var camera = host.get_node("Sight/Camera")
 	camera.current = true
 
 
@@ -19,11 +16,16 @@ func _input(event):
 	if event is InputEventMouseMotion:
 		var rotation = event.relative * MOUSE_SENSITIVITY
 		
-		camera.rotation.x = clamp(camera.rotation.x - rotation.y, -PI / 2.0, PI / 2.0)
+		var sight = host.sight
+		sight.rotation.x = clamp(sight.rotation.x + rotation.y, -PI / 2.0, PI / 2.0)
+		
 		host.rotation.y -= rotation.x
 
 
 func _think(_delta):
+	if Input.is_action_pressed("fire"):
+		host.fire()
+	
 	var movement = Vector2.ZERO
 	
 	movement.x += Input.get_action_strength("move_left")

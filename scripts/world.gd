@@ -5,7 +5,7 @@ extends Spatial
 const PATHFINDING_OFFSET = Vector3(0.5, 1.0, 0.5)
 
 # World size in the XZ plane.
-export(int) var world_size = 80
+export(int) var world_size = 64
 
 # How tall the entire terrain section is.
 export(int) var terrain_height = 16
@@ -17,7 +17,7 @@ export(float) var period = 0.8
 export(float) var lacunarity = 2.5
 
 # Spawn this many creatures when the world is generated.
-export(int) var creatures_count = 30
+export(int) var creatures_count = 10
 
 # Creatures will be placed at least this many tiles apart.
 export(float) var private_space = 5.0
@@ -92,6 +92,7 @@ func generate_terrain():
 	randomize()
 	
 	var noisy = OpenSimplexNoise.new()
+	
 	noisy.seed = randi()
 	noisy.period = world_size * period
 	noisy.lacunarity = lacunarity
