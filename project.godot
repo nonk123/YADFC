@@ -9,13 +9,25 @@
 config_version=4
 
 _global_script_classes=[ {
+"base": "Node",
+"class": "AI",
+"language": "GDScript",
+"path": "res://scripts/ai.gd"
+}, {
 "base": "KinematicBody",
 "class": "Creature",
 "language": "GDScript",
 "path": "res://scripts/creature.gd"
+}, {
+"base": "AI",
+"class": "WalkingAI",
+"language": "GDScript",
+"path": "res://scripts/walking_ai.gd"
 } ]
 _global_script_class_icons={
-"Creature": ""
+"AI": "",
+"Creature": "",
+"WalkingAI": ""
 }
 
 [application]

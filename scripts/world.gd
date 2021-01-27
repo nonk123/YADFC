@@ -1,7 +1,7 @@
 extends Spatial
 
 
-# In what way is the mouse locked.
+# In what way the mouse is locked.
 enum MouseLock {
 	NONE,
 	PANNING,
@@ -11,9 +11,6 @@ enum MouseLock {
 
 # Camera flight speed in tiles/s.
 const CAMERA_FLIGHT_SPEED = 20.0
-
-# How far you can click.
-const CLICK_RANGE = 64.0
 
 const PANNING_FACTOR = 0.04
 
@@ -144,7 +141,8 @@ func do_click_action(click_position):
 		
 		selected_creature.shade_ring(Color(0.0, 0.8, 0.0))
 	elif selected_creature and node_enabled:
-		selected_creature.target = result.position
+		var ai = selected_creature.get_node("AI")
+		ai.target = result.position
 
 
 func process_camera(delta):
@@ -230,12 +228,16 @@ func place_creatures():
 		
 		var node = preload("res://entities/creature.tscn").instance()
 		node.translate(Vector3(position.x, terrain_height, position.y))
+		
+		var ai = WalkingAI.new()
+		node.add_child(ai)
+		
 		creatures.add_child(node)
 
 
 func cast_ray(cursor_position, exclude = []):
 	var start = camera.project_ray_origin(cursor_position)
-	var end = start + camera.project_ray_normal(cursor_position) * CLICK_RANGE
+	var end = start + camera.project_ray_normal(cursor_position) * camera.far
 	
 	var space = get_world().direct_space_state
 	return space.intersect_ray(start, end, exclude)
