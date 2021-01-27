@@ -9,16 +9,12 @@ export(float) var gravity = 9.8
 export(float) var movement_speed = 8.0
 
 # Jumping accelerates the creature this much.
-export(float) var jump_power = 4.5
+export(float) var jump_power = 6.0
 
 # Velocity with movement applied.
 var velocity = Vector3.ZERO
 
 onready var astar = get_node("/root/World").astar
-
-
-func _ready():
-	shade_ring()
 
 
 func _physics_process(delta):
@@ -36,7 +32,3 @@ func disable_node_below(disabled):
 	
 	if its_id != -1:
 		astar.set_point_disabled(its_id, disabled)
-
-
-func shade_ring(color = Color(0.7, 0.7, 0.7)):
-	$Ring.modulate = color

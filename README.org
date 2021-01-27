@@ -1,6 +1,6 @@
 * Yet Another DF Clone
 
-Nothing to see here, just another Minecraft terrain generator. It might
-(?) become an RTS though.
+Nothing to see here, just another Minecraft terrain generator. No longer
+an RTS.
 
 *NOTE:* the Windows export template requires =rcedit=.
