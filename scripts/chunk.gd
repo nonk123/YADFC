@@ -54,7 +54,7 @@ func _process(_delta):
 			continue
 		
 		var height = _box_queue[position] * 0.5
-		position += Vector3.UP * height
+		position += Vector3(0.5, height, 0.5)
 		
 		var shape = world.shape_cache.get(height)
 		
@@ -105,11 +105,10 @@ func generate():
 
 func fill(x, y, z, tile_type):
 	var point = Vector3(x, y, z)
+	var tile_id = get_tile_id(point)
 	
 	var offset = world.available_tile_types[tile_type]
 	var offset8 = Color(offset.x, offset.y, 0.0, 0.0)
-	
-	var tile_id = get_tile_id(point)
 	
 	var transform = Transform(Basis.IDENTITY, point + Vector3.ONE * 0.5)
 	mesh.multimesh.set_instance_transform(tile_id, transform)
@@ -121,13 +120,6 @@ func fill(x, y, z, tile_type):
 
 
 func add_cube_collider(position):
-	var half = Vector3.ONE * 0.5
-	
-	var box = BoxShape.new()
-	box.extents = half
-	
-	position += half
-	
 	var below = position + Vector3.DOWN
 	var box_below = _box_queue.get(below)
 	
