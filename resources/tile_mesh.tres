@@ -1,0 +1,43 @@
+[gd_resource type="CubeMesh" load_steps=4 format=2]
+
+[ext_resource path="res://textures/tiles.png" type="Texture" id=1]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type spatial;
+
+uniform sampler2D atlas;
+
+// How many textures there are in the atlas.
+uniform vec2 atlasSize;
+
+varying vec2 atlasOffset;
+
+varying vec3 localVertex;
+
+void vertex() {
+	atlasOffset = INSTANCE_CUSTOM.xy;
+	localVertex = VERTEX;
+}
+
+void fragment() {
+	float vertexY = localVertex.y + 0.5;
+	
+	vec2 offset;
+	
+	vec2 uv = UV * vec2(3.0, 2.0);
+	
+	if (uv.y >= 1.0)
+		offset.x = floor(uv.x);
+	
+	vec2 atlasUV = (offset + atlasOffset + fract(uv)) / atlasSize;
+	ALBEDO = texture(atlas, atlasUV).rgb;
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/atlasSize = Vector2( 3, 3 )
+shader_param/atlas = ExtResource( 1 )
+
+[resource]
+material = SubResource( 2 )
+size = Vector3( 1, 1, 1 )

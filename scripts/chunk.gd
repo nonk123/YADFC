@@ -72,15 +72,10 @@ func _process(_delta):
 func setup_multimesh():
 	var multimesh = MultiMesh.new()
 	
-	multimesh.transform_format = multimesh.TRANSFORM_3D
-	multimesh.color_format = multimesh.COLOR_8BIT
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.custom_data_format = MultiMesh.CUSTOM_DATA_FLOAT
 	multimesh.instance_count = TILES_MAX
-	
-	multimesh.mesh = CubeMesh.new()
-	multimesh.mesh.size = Vector3.ONE
-	
-	multimesh.mesh.material = SpatialMaterial.new()
-	multimesh.mesh.material.vertex_color_use_as_albedo = true
+	multimesh.mesh = preload("res://resources/tile_mesh.tres")
 	
 	mesh.multimesh = multimesh
 
@@ -110,13 +105,15 @@ func generate():
 
 func fill(x, y, z, tile_type):
 	var point = Vector3(x, y, z)
-	var color = world.available_tile_types[tile_type].color
+	
+	var offset = world.available_tile_types[tile_type]
+	var offset8 = Color(offset.x, offset.y, 0.0, 0.0)
 	
 	var tile_id = get_tile_id(point)
 	
 	var transform = Transform(Basis.IDENTITY, point + Vector3.ONE * 0.5)
 	mesh.multimesh.set_instance_transform(tile_id, transform)
-	mesh.multimesh.set_instance_color(tile_id, color)
+	mesh.multimesh.set_instance_custom_data(tile_id, offset8)
 	
 	add_cube_collider(point)
 	

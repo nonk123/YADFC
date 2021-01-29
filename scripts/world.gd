@@ -6,15 +6,9 @@ const VIEW_DISTANCE = 3
 
 # Tiles available for placement.
 var available_tile_types = {
-	"grass": {
-		"color": Color(0.0, 0.6, 0.0)
-	},
-	"dirt": {
-		"color": Color(0.54, 0.27, 0.07)
-	},
-	"stone": {
-		"color": Color(0.4, 0.4, 0.4)
-	},
+	"stone": Vector2(0.0, 0.0),
+	"grass": Vector2(0.0, 1.0),
+	"dirt": Vector2(0.0, 2.0),
 }
 
 # The seed to generate this world.
@@ -49,6 +43,7 @@ func _process(_delta):
 	$FPS.text = "FPS: %s" % Engine.get_frames_per_second()
 
 
+# Load VIEW_DISTANCE chunks around given world coordinates.
 func load_chunks_around(position):
 	position = to_chunk_position(position)
 	
