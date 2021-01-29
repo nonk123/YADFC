@@ -43,3 +43,5 @@ func _think(_delta):
 	
 	if host.is_on_floor():
 		host.velocity.y = host.jump_power * Input.get_action_strength("jump")
+	
+	get_node("/root/World").load_chunks_around(host.translation)

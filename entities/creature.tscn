@@ -30,12 +30,12 @@ animations = [ {
 
 [sub_resource type="SpatialMaterial" id=3]
 flags_transparent = true
-params_billboard_mode = 2
+flags_use_point_size = true
+params_point_size = 64.0
 albedo_texture = ExtResource( 6 )
 
-[sub_resource type="QuadMesh" id=4]
+[sub_resource type="PointMesh" id=4]
 material = SubResource( 3 )
-size = Vector2( 0.3, 0.3 )
 
 [node name="Creature" type="KinematicBody"]
 script = ExtResource( 2 )

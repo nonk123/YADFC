@@ -49,7 +49,6 @@ func _ready():
 	
 	# Don't play a shooting animation when we spawn.
 	_time_since_last_shot = gun_cooldown
-	
 
 
 func _physics_process(delta):
