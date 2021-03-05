@@ -35,6 +35,8 @@ onready var gun_cooldown = 60.0 / gun_rpm
 # Rotate this node to aim up and down.
 onready var sight = $Sight
 
+onready var raycast = sight.get_node("RayCast")
+
 onready var gun = sight.get_node("Gun")
 
 onready var gunshot = gun.get_node("Gunshot")
@@ -47,6 +49,8 @@ func _ready():
 	var fps = ceil(gun_rpm / 60.0) * 2
 	gun.frames.set_animation_speed("shooting", fps)
 	
+	raycast.cast_to *= gun_range
+	
 	# Don't play a shooting animation when we spawn.
 	_time_since_last_shot = gun_cooldown
 
@@ -55,9 +59,9 @@ func _physics_process(delta):
 	velocity.y -= gravity * delta
 	
 	# Prevent moving into our spot.
-	disable_node_below(false)
+	toggle_node_below(false)
 	velocity = move_and_slide(velocity, Vector3.UP)
-	disable_node_below(true)
+	toggle_node_below(true)
 
 
 func _process(delta):
@@ -69,8 +73,8 @@ func _process(delta):
 		gun.play("shooting")
 
 
-# Disable the pathfinding node we are standing on.
-func disable_node_below(disabled):
+# Disable or enable the pathfinding node we are standing on.
+func toggle_node_below(disabled):
 	var its_id = astar.get_closest_point(translation, true)
 	
 	if its_id != -1:
@@ -86,23 +90,14 @@ func fire():
 	_time_since_last_shot = 0.0
 	gunshot.play()
 	
-	var space = get_world().direct_space_state
+	if not raycast.is_colliding():
+		return
 	
-	var direction = Vector3(0.0, 0.0, 1.0)
+	var enemy = raycast.get_collider()
+	var point = raycast.get_collision_point()
 	
-	direction = direction.rotated(Vector3.RIGHT, sight.rotation.x)
-	direction = direction.rotated(Vector3.UP, rotation.y)
-	
-	var from = sight.global_transform.origin
-	var to = from + direction * gun_range
-	
-	var result = space.intersect_ray(from, to, [self])
-	
-	if result:
-		var enemy = result.collider
-		
-		if enemy.has_method("deal_damage"):
-			enemy.deal_damage(gun_damage, result.position)
+	if enemy.has_method("deal_damage"):
+		enemy.deal_damage(gun_damage, point)
 
 
 # Deal this much damage to the creature, deleting it if it died.

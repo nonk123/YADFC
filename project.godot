@@ -114,6 +114,10 @@ quit={
  ]
 }
 
+[physics]
+
+3d/active_soft_world=false
+
 [rendering]
 
 environment/default_environment="res://default_env.tres"

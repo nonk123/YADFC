@@ -66,6 +66,10 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0.05 )
 transform = Transform( -1, 0, -3.25841e-07, 0, 1, 0, 3.25841e-07, 0, -1, 0, 0, 0 )
 far = 64.0
 
+[node name="RayCast" type="RayCast" parent="Sight"]
+enabled = true
+cast_to = Vector3( 0, 0, 1 )
+
 [node name="Gun" type="AnimatedSprite3D" parent="Sight"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, -0.15, 0.4 )
 pixel_size = 0.0156
